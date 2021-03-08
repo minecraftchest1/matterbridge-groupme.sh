@@ -1,0 +1,68 @@
+#!/bin/bash -x
+
+#Somewhat working script.
+
+Send()
+{
+	oldMsgID=$msgID
+	#echo oldMsgID: $msgID
+
+	#Receve message from groupme
+	messages=$(curl -s "https://api.groupme.com/v3/groups/<Groupid here>/messages?token=<botTokenHere>&limit=1")
+	#echo $messages | jq '.response.messages[]'
+
+	text1=$(echo $messages| jq '.response.messages[].text')
+	#echo $text
+
+	user1=$(echo $messages| jq '.response.messages[].name')
+	#echo $user
+
+	msgID=$(echo $messages| jq '.response.messages[].id')
+	#echo msgID: $msgID
+
+	if [[ $oldMsgID == $msgID ]]
+	then
+		return
+	fi
+
+	#send message to matterbridge
+	curl -s -H "Authorization: Bearer A1b2C3" -H "Content-Type: application/json" http://192.168.1.40:4243/api/message -d"{\"text\":$text1,\"username\":$user1,\"gateway\":\"gateway4\"}" > out.log
+
+}
+
+Receve()
+{
+	#get messages from matterbridge
+	message=$(curl -H "Authorization: Bearer A1b2C3" http://192.168.1.40:4243/api/messages)
+
+	if [[ $message == "[]" ]]
+	then
+		return
+	fi
+	
+	text=$(echo $messages| jq '.response.messages[].text')
+	echo $text
+
+	protocol=$(echo $messages| jq '.response.messages[].protocol')
+	echo $protocol
+
+	user=$(echo $messages| jq '.response.messages[].username')
+	#echo $user
+
+	text2=$(echo "[$protocol]<$user> $text")
+	echo $text2
+
+	#send message to groupme
+	#curl -s -H "Content-Type: application/json" "https://api.groupme.com/v3/groups/<groupID>/messages?token=<botToken>" -d"{\"message\":{\"source_guid\":\"$(date +%s)\",\"text\":\"Hello world \"}}"
+}
+
+Repeat()
+{
+	Send
+	Receve
+	#rerun every 30 seconds.
+	sleep 30s
+	Repeat
+}
+
+Repeat
